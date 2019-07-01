@@ -1,7 +1,8 @@
 specialChar = ["0", "00"];
 //vetores de caracteres das operaçoes
 operationChar = ['.', "*", "-", "+", "=", "/", "DEL"];
-newChar = ['AND', 'OR', '^', '√', 'fib']
+newChar = ['A', 'O', '^', '√', 'fib'];
+logicalChar = ['A', 'O'];
 
 function equal(vet1, vet2) {
     if (vet1.length != vet1.length) {
@@ -21,7 +22,36 @@ $(document).ready(function() {
     var resScreen = $("#results p");
     var resAssembly = $("#assembly");
 
-    function ordena(simbol, a_ops) {
+    function tipo_operacao(simbolo) {
+        console.log("entra aqui");
+        switch (simbolo) {
+            case '+':
+                op = 'add';
+                break;
+            case '-':
+                op = 'sub';
+                break;
+            case '/':
+                op = 'div';
+                break;
+            case '*':
+                op = 'mul';
+                break;
+            case 'A':
+                op = 'and';
+                break;
+            case 'O':
+                op = 'or';
+                break;
+            default:
+                op = ""
+                console.log("error");
+        }
+        return op;
+    }
+
+    function ordena(simbol, a_ops, tipo = '') {
+        //console.log(a_ops);
         pos = a_ops['pos'];
         op = a_ops['op'];
         num = a_ops['num'];
@@ -30,7 +60,7 @@ $(document).ready(function() {
         posicao = ordenado['pos'] = new Array();
         operacao = ordenado['op'] = new Array();
         cont = ordenado['cont'] = new Array();
-        ordenado['num'] = num;
+        n = new Array();
         for (j = 0; j < simbol.length; j++) {
             i = 0;
             if (op.includes(simbol[j])) {
@@ -39,13 +69,20 @@ $(document).ready(function() {
                         posicao.push(pos[i]);
                         operacao.push(op[i]);
                         cont.push(c[i]);
+                        if (tipo == 2) {
+                            n.push(num[i]);
+                        }
                     }
                     i++;
                 }
             }
         }
+        if (tipo == 2) {
+            ordenado['num'] = n;
+        } else {
+            ordenado['num'] = a_ops['num'];
+        }
         console.log(ordenado);
-        //console.log(a_ops);
         return ordenado;
     }
 
@@ -54,17 +91,18 @@ $(document).ready(function() {
         if (tipo == 1) {
             ordenado = ordena(["*", "/", "+", "-"], a_ops);
         } else if (tipo == 2) {
-            ordenado = ordena(["^", "√", "AND", "OR", "fib"], a_ops);
+            ordenado = ordena(["^", "√", "A", "O", "fib"], a_ops, 2);
         }
-        //console.log(a_ops);
         return ordenado;
     }
 
     function create_assembly(currentValue, op) {
-        //op = 1 caracteres simples
-        //op = 2 caracteres complexos(new)
-        //op = 3 notação polonesa reversa
-        //calculo em assembly
+        console.log(currentValue)
+            //console.log(currentValue)
+            //op = operacoes simples e lógicas
+            //op = 2 caracteres complexos(new)
+            //op = 3 notação polonesa reversa
+            //calculo em assembly
         assembly = resAssembly.val();
         data = ".data\nresult: .word 0x0\n";
         txt = ".text \n main: \nla $t8, result\n";
@@ -74,6 +112,7 @@ $(document).ready(function() {
         finaliza = "sw $t9,0($t8)\nla $a0,0($t9)\nli $v0,1 \nsyscall";
         //ativar textarea
         if (op == 1) {
+            logical = false;
             n_regs = 1;
             n_ops = 0
             a_ops = new Array();
@@ -92,6 +131,19 @@ $(document).ready(function() {
                         operacao.push(operationChar[j]);
                         num = num.replace(operationChar[j], "#");
                     }
+
+                }
+                for (j = 0; j < logicalChar.length; j++) {
+                    if (currentValue[i] === logicalChar[j]) {
+                        console.log('oi');
+                        cont.push(n_ops);
+                        n_regs++;
+                        n_ops++;
+                        operacao.push(logicalChar[j]);
+                        num = num.replace(logicalChar[j], "#");
+                        logical = true;
+                    }
+
                 }
                 posicao.push(i);
 
@@ -100,18 +152,25 @@ $(document).ready(function() {
             for (i = 0; i < num.length; i++) {
                 numero.push(num[i]);
             }
-            a_ops = ordem_mat(a_ops, 1);
-            //repetido
-            posicao = a_ops['pos'];
-            operacao = a_ops['op'];
-            numero = a_ops['num'];
-            cont = a_ops['cont'];
-            pos_ord = posicao.slice().sort();
+            if (!logical) {
+                a_ops = ordem_mat(a_ops, 1);
+                //repetido
+                posicao = a_ops['pos'];
+                operacao = a_ops['op'];
+                numero = a_ops['num'];
+                cont = a_ops['cont'];
+                pos_ord = posicao.slice().sort();
+            } else {
+                pos_ord = posicao.slice();
+            }
+            console.log(logical);
+            console.log(a_ops);
+
+
             //monta registradores
             for (i = 0; i < n_regs; i++) {
                 //montar data
                 data = data + "n" + i + ": .word 0x0\n";
-                //console.log(data);
                 //montar txt
                 txt = txt + "la $t" + i + ", n" + i + "\n";
                 //montar syscall
@@ -120,26 +179,8 @@ $(document).ready(function() {
                 lw = lw + "lw  $s" + i + ", 0($t" + i + ")\n";
             }
             //montar calculo
-            //for (i = 0; i < currentValue.length; i++) {
             for (j = 0; j < n_ops; j++) {
-                switch (operacao[j]) {
-                    case '+':
-                        op = 'add';
-                        break;
-                    case '-':
-                        op = 'sub';
-                        break;
-                    case '/':
-                        op = 'div';
-                        break;
-                    case '*':
-                        op = 'mul';
-                        break;
-                    default:
-                        op = ""
-                        console.log("error");
-                }
-
+                op = tipo_operacao(operacao[j]);
                 if (j == 0) {
                     calculo = calculo + op + " $t9, $s" + cont[j] + ", $s" + (cont[j] + 1) + "\n";
                 } else {
@@ -161,102 +202,138 @@ $(document).ready(function() {
     }
 
     function calc(currentValue) {
-        sep = currentValue.split("");
         noNew = true;
         mist = false;
-        var pos = new Array();
         n_regs = 1;
         n_ops = 0
         a_ops = new Array();
         posicao = a_ops['pos'] = new Array();
         operacao = a_ops['op'] = new Array();
-        //console.log("oi");
+        cont = a_ops['cont'] = new Array();
+        n = new Array();
+        if (currentValue.includes("AND")) {
+            console.log("oi");
+            currentValue.replace("AND", "A");
+        }
+        if (currentValue.includes("OR")) {
+            currentValue.replace("OR", "O");
+        }
+
         for (i = 0; i < currentValue.length; i++) {
             for (j = 0; j < newChar.length; j++) {
+                //console.log(newChar[j]);
                 if (currentValue[i] === newChar[j]) {
                     noNew = false;
+                    num = "";
+                    cont.push(n_ops);
                     n_ops++;
-                    posicao.push(i);
                     operacao.push(newChar[j]);
-                    //console.log(a_ops);
+                    posicao.push(i);
+                    if (currentValue[i] == "√") {
+                        u = i + 1;
+                        num = currentValue[i];
+                        while (u < currentValue.length && (!newChar.includes(currentValue[u]) && !operationChar.includes(currentValue[u]))) {
+                            num = num + '' + currentValue[u];
+                            u++;
+                        }
+                    } else {
+                        u = i - 1;
+                        for (j = 0; j < posicao.length; j++) {
+                            if (posicao[j] == i) {
+                                if (j > 0) {
+                                    u = posicao[j - 1] + 1;
+                                } else {
+                                    u = 0;
+                                }
+                                while (u < i && (!newChar.includes(currentValue[u]) && !operationChar.includes(currentValue[u]))) {
+                                    num = num + '' + currentValue[u];
+                                    u++;
+                                }
+                            }
+
+                        }
+                        num = num + currentValue[i];
+                        u = i + 1;
+                        while (u < currentValue.length && (!newChar.includes(currentValue[u]) && !operationChar.includes(currentValue[u]))) {
+                            num = num + '' + currentValue[u];
+                            u++;
+                        }
+                    }
+                    n.push(num);
+
                 }
             }
+
         }
+        console.log(noNew);
+        a_ops['num'] = n;
         if (noNew) {
             resScreen.text(eval(currentValue));
             create_assembly(currentValue, 1);
         } else {
+            a_ops = ordem_mat(a_ops, 2);
+            //repetido
+            posicao = a_ops['pos'];
+            operacao = a_ops['op'];
+            numero = a_ops['num'];
             for (i = 0; i < currentValue.length; i++) {
                 for (j = 0; j < n_ops; j++) {
+                    console.log(n_ops);
                     pos = posicao[j];
-                    /*if (i == pos) {
-                            if (operacao[j] == )
-
-
-
-                            //calculo = currentValue;
-
-                                pos = posicao[j];
-
-                            switch (operacao[j]) {
-                                case '^':
-                                    op = 'sub';
-                                    break;
-                                case '√':
-
-
-                                    numero = currentValue[pos + 1];
-                                    break;
-
-                                case 'AND':
-                                    op = 'div';
-                                    break;
-                                case 'OR':
-                                    op = 'mult';
-                                    break;
-                                case 'fib':
-
-                                default:
-                                    console.log("error");
-
+                    if (operacao[j] == currentValue[i]) {
+                        if (operacao[j] == "^") {
+                            n = numero[j].split("^");
+                            result = Math.pow(n[0], n[1]);
+                            res = currentValue.replace(numero[j], result);
+                        } else if (operacao[j] == "√") {
+                            n = numero[j].replace("√", "");
+                            result = Math.sqrt(n);
+                            //volta = true;
+                            if (!isNaN(currentValue[pos - 1])) {
+                                res = currentValue.replace(numero[j], "*" + result);
+                            } else {
+                                res = currentValue.replace(numero[j], result);
                             }
-                    }*/
+                        } else if (operacao[j] == "A") {
+                            n = numero[j].split("AND");
+                            if (n[0] == n[1]) {
+                                result = n[0];
+                            } else {
+                                result = 0;
+                            }
+                            res = currentValue.replace(numero[j], result);
+                            create_assembly(numero[j].replace("AND", "A"), 1);
 
+                        } else if (operacao[j] == "O") {
+                            n = numero[j].split("OR");
+                            if (n[0] == n[1]) {
+                                result = n[0];
+                            } else {
+                                result = parseInt(n[0]) + parseInt(n[1]);
+                            }
+                            res = currentValue.replace(numero[j], result);
+                            create_assembly(numero[j].replace("OR", "O"), 1);
+
+                        } else {
+                            res = "";
+                            console.log("erro calculo");
+                        }
+
+                    }
                 }
 
             }
+            if (isNaN(res)) {
+                calc(res)
+            } else {
+                resScreen.text(eval(res));
+            }
 
-
-            //console.log("entrou");
-
-
-
-
-            /*for (i = 0; i < currentValue.length; i++) {
-                if ()
-                    j = pos[i];
-                if (sep[j] == "^") {
-                    //operacao = sep.split("^");
-                    total = Math.pow(sep[0], sep[2]);
-                    console.log(total);
-                }
-            }*/
-
-
-            //create_assembly(currentValue, 2);
         }
-        /*if (operationChar.includes(currentValue) && !newChar.includes(currentValue)) {
-            resScreen.text(eval(currentValue));
-        } else if (newChar.includes(currentValue)) {
-            sep = currentValue.split(newChar)
-            console.log("aqui")
-        }*/
     }
     $("#numbers .button").click(function() {
-        keyVal = $(this).children("p").text(); // Gets the key value
+        keyVal = $(this).children("p").text();
         currentValue = opScreen.val();
-        console.log(currentValue);
-
         if (currentValue === "0") {
             if (!specialChar.includes(keyVal) && !operationChar.includes(keyVal)) {
                 opScreen.val(keyVal);
@@ -297,8 +374,6 @@ $(document).ready(function() {
         if (keyVal === "=") {
             console.log(currentValue);
             calc(currentValue);
-            //resScreen.text(eval(currentValue));
-
         } else if (keyVal === "DEL") {
             resScreen.text("0");
             opScreen.val("");
