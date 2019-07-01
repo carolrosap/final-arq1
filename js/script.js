@@ -3,46 +3,53 @@ specialChar = ["0", "00"];
 operationChar = ['.', "*", "-", "+", "=", "/", "DEL"];
 newChar = ['AND', 'OR', '^', '√', 'fib']
 
+function equal(vet1, vet2) {
+    if (vet1.length != vet1.length) {
+        return false;
+    } else {
+        for (i = 0; i < vet1.length; i++) {
+            if (vet1[i] != vet2[i]) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
 $(document).ready(function() {
     var opScreen = $("#display");
     var resScreen = $("#results p");
     var resAssembly = $("#assembly");
 
     function ordena(simbol, a_ops) {
-        console.log(simbol);
         pos = a_ops['pos'];
         op = a_ops['op'];
         num = a_ops['num'];
+        c = a_ops['cont'];
         ordenado = new Array();
         posicao = ordenado['pos'] = new Array();
         operacao = ordenado['op'] = new Array();
-        numero = ordenado['num'] = new Array();
+        cont = ordenado['cont'] = new Array();
+        ordenado['num'] = num;
         for (j = 0; j < simbol.length; j++) {
-            //console.log(simbol[j]);
             i = 0;
             if (op.includes(simbol[j])) {
                 while (i < op.length) {
-                    console.log("aqiu entrea");
                     if (op[i] == simbol[j]) {
                         posicao.push(pos[i]);
                         operacao.push(op[i]);
-                        numero.push(num[i]);
-
+                        cont.push(c[i]);
                     }
                     i++;
                 }
             }
         }
-        //console.log(ordenado);
+        console.log(ordenado);
         //console.log(a_ops);
         return ordenado;
-
     }
 
-
-
     function ordem_mat(a_ops, tipo) {
-        //console.log(a_ops);
         ordenado = new Array();
         if (tipo == 1) {
             ordenado = ordena(["*", "/", "+", "-"], a_ops);
@@ -64,7 +71,7 @@ $(document).ready(function() {
         syscall = "";
         lw = "";
         calculo = ""
-        finaliza = "sw $t9,0($t8)\nla $a0,0($t9)\nli $v0, \nsyscall";
+        finaliza = "sw $t9,0($t8)\nla $a0,0($t9)\nli $v0,1 \nsyscall";
         //ativar textarea
         if (op == 1) {
             n_regs = 1;
@@ -73,31 +80,33 @@ $(document).ready(function() {
             posicao = a_ops['pos'] = new Array();
             operacao = a_ops['op'] = new Array();
             numero = a_ops['num'] = new Array();
+            cont = a_ops['cont'] = new Array();
             num = currentValue;
-            //numero.push(num);
             //contar operacoes e registradores
             for (i = 0; i < currentValue.length; i++) {
                 for (j = 0; j < operationChar.length; j++) {
                     if (currentValue[i] === operationChar[j]) {
+                        cont.push(n_ops);
                         n_regs++;
                         n_ops++;
-                        posicao.push(i);
                         operacao.push(operationChar[j]);
                         num = num.replace(operationChar[j], "#");
-                        //numero.push(num);
-
                     }
                 }
+                posicao.push(i);
 
             }
             num = num.split("#");
             for (i = 0; i < num.length; i++) {
                 numero.push(num[i]);
             }
-            console.log(a_ops);
             a_ops = ordem_mat(a_ops, 1);
-            //console.log("ordenado");
-
+            //repetido
+            posicao = a_ops['pos'];
+            operacao = a_ops['op'];
+            numero = a_ops['num'];
+            cont = a_ops['cont'];
+            pos_ord = posicao.slice().sort();
             //monta registradores
             for (i = 0; i < n_regs; i++) {
                 //montar data
@@ -130,21 +139,18 @@ $(document).ready(function() {
                         op = ""
                         console.log("error");
                 }
-                //if (i == posicao[j]) {
+
                 if (j == 0) {
-                    if (pos[j] > pos[j + 1]) {
-
-                    }
-                    calculo = calculo + op + " $t9, $s" + j + ", $s" + (j + 1) + "\n";
+                    calculo = calculo + op + " $t9, $s" + cont[j] + ", $s" + (cont[j] + 1) + "\n";
                 } else {
-                    calculo = calculo + op + " $t9, $t9, $s" + (j + 1) + "\n";
+                    if (equal(posicao, pos_ord)) {
+                        calculo = calculo + op + " $t9, $t9, $s" + (cont[j] + 1) + "\n";
+                    } else {
+                        calculo = calculo + op + " $t9, $t9, $s" + (cont[j]) + "\n";
+                    }
+
                 }
-
-                //}
-                //console.log(calculo);
-
             }
-            //}
 
         } else if (op == 2) {
 
