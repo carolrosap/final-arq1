@@ -8,6 +8,11 @@
     padding: 0
 }
 
+#card-panel {
+    padding-right: 0px;
+    padding-left: 0px;
+}
+
 #screens p,
 #screeens input {
     margin: 2px;
