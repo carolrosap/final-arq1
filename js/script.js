@@ -17,14 +17,152 @@ function equal(vet1, vet2) {
     return true;
 }
 
+function isNumeric(num) {
+    return !isNaN(parseFloat(num)) && isFinite(num) && !isNaN(num);
+}
+
+function fibonacci(num) {
+    if (num < 2) {
+        return num;
+    } else {
+        return parseInt(fibonacci(num - 1) + fibonacci(num - 2));
+    }
+
+}
+
+function fatorial(num) {
+    if (num < 1) {
+        return 1;
+    } else {
+        return parseInt(num * fatorial(num - 1));
+    }
+}
 $(document).ready(function() {
     var opScreen = $("#display");
     var resScreen = $("#results p");
     var resAssembly = $("#assembly");
 
+    function rem_endspaces(currentValue) {
+        last_ind = currentValue.length - 1;
+        lastDigit = currentValue.substring(last_ind);
+        lastDigit = currentValue.substring(last_ind);
+        if (lastDigit === " ") {
+            currentValue = currentValue.slice(0, -1);
+            return rem_endspaces(currentValue);
+        } else {
+            return currentValue;
+        }
+
+    }
+
+
+    function notacao_polonesa(expressao) {
+        var result = [];
+        expressao = expressao.split(" ");
+        n_regs = 0;
+        n_ops = 0;
+        t9 = false;
+        c3 = 0;
+        data = ".data\nresult: .word 0x0\n";
+        txt = ".text \n main: \n";
+        li = "la $a1, result\n";
+        finaliza = "sw $t9,0($a1)\nla $a0, 0($t9)\nli $v0, 1\nsyscall\n";
+        calculo = "";
+
+        for (var i = 0; i < expressao.length; i++) {
+            exp = expressao[i];
+            //console.log(expressao);
+            if (isNumeric(exp)) {
+                result.push(exp);
+                li += "li $s" + n_regs + "," + exp + "\n";
+                n_regs++;
+                c3++;
+            } else {
+                var a = parseInt(result.pop());
+                if (exp != "f" && exp !== "F" && exp !== "s" && exp !== "S") {
+                    var b = parseInt(result.pop());
+                    op = tipo_operacao(exp);
+                    if (n_ops >= 1 && !isNumeric(expressao[i - 2])) {
+                        t9 = true;
+                    }
+                    if (i < (expressao.length - 3)) {
+                        if (!t9) {
+                            calculo = calculo + op + " $a" + n_ops + ",$s" + (n_regs - 1) + ",$s" + n_regs + "\n";
+                            //console.log("aqui");
+                            //console.log(calculo);
+                            //console.log(n_regs);
+                        } else {
+                            calculo += op + " $t9,$a" + n_ops + ",$s" + n_regs + "\n";
+                        }
+
+                    } else if ((i > (expressao.length - 3)) && expressao.length > 3) {
+                        calculo += op + " $t9,$t9" + ",$s" + (n_regs - 1) + "\n";
+                    } else if ((i > (expressao.length - 3)) && expressao.length <= 3) {
+                        calculo += op + " $t9,$s0" + ",$s1\n";
+                        console.log("DEVIA AQUI");
+                    } else {
+                        //console.log("DEVIA AQUI");
+                        u = 0;
+                        while (u < n_ops) {
+                            if (c3 == 3) {
+                                if (t9) {
+                                    calculo += op + "$t9,$t9" + ",$s0 \n";
+                                    u++;
+                                } else if (!t9 && u < 1) {
+                                    calculo += op + " $t9,$s0" + ",$a0\n";
+                                    u += 1;
+                                    t9 = true;
+                                }
+                            } else {
+                                if (t9) {
+                                    calculo += op + " $t9,$t9" + ",$a" + u + "\n";
+                                    u++;
+                                } else if (!t9 && u <= 1) {
+                                    calculo += op + " $t9,$a0" + ",$a1\n";
+                                    u += 2;
+                                    t9 = true;
+                                }
+                            }
+
+                        }
+
+                    }
+                    n_ops++;
+                }
+                if (exp === "+") {
+                    result.push(a + b);
+                } else if (exp === "-") {
+                    result.push(b - a);
+                } else if (exp === "*" || exp === "x" || exp === "X") {
+                    result.push(a * b);
+                } else if (exp === "/") {
+                    result.push(b / a);
+                } else if (exp === "^" || exp === "p" || exp === "P") {
+                    result.push(Math.pow(b, a));
+                } else if (exp === "s" || exp === "S") {
+                    result.push(Math.sqrt(a));
+                } else if (exp === "f") {
+                    result.push(fibonacci(a));
+                } else if (exp === "F") {
+                    result.push(fatorial(a));
+                }
+            }
+            //console.log(result);
+        }
+        if (result.length > 1) {
+            console.log("erro notacao");
+            resScreen.text("ERRO");
+        } else {
+            resScreen.text(result.pop());
+            //assembly_notacao(expressao);
+            total = data + txt + li + calculo + finaliza;
+            resAssembly.val(total);
+            console.log(result.pop());
+        }
+    }
+
     function tipo_operacao(simbolo) {
-        console.log("entra aqui");
-        switch (simbolo) {
+        switch (simbolo.toString()) {
             case '+':
                 op = 'add';
                 break;
@@ -35,6 +173,12 @@ $(document).ready(function() {
                 op = 'div';
                 break;
             case '*':
+                op = 'mul';
+                break;
+            case 'x':
+                op = 'mul';
+                break;
+            case 'X':
                 op = 'mul';
                 break;
             case 'A':
@@ -97,18 +241,15 @@ $(document).ready(function() {
     }
 
     function create_assembly(currentValue, op) {
-        console.log(currentValue)
-            //console.log(currentValue)
-            //op = operacoes simples e lógicas
-            //op = 2 caracteres complexos(new)
-            //op = 3 notação polonesa reversa
-            //calculo em assembly
-        assembly = resAssembly.val();
+        //console.log(currentValue)
+        //op = operacoes simples e lógicas
+        //op = 2 caracteres complexos(new)
+        //calculo em assembly
         data = ".data\nresult: .word 0x0\n";
         txt = ".text \n main: \nla $t8, result\n";
         syscall = "";
         lw = "";
-        calculo = ""
+        calculo = "";
         finaliza = "sw $t9,0($t8)\nla $a0,0($t9)\nli $v0,1 \nsyscall";
         //ativar textarea
         if (op == 1) {
@@ -135,7 +276,6 @@ $(document).ready(function() {
                 }
                 for (j = 0; j < logicalChar.length; j++) {
                     if (currentValue[i] === logicalChar[j]) {
-                        console.log('oi');
                         cont.push(n_ops);
                         n_regs++;
                         n_ops++;
@@ -146,7 +286,6 @@ $(document).ready(function() {
 
                 }
                 posicao.push(i);
-
             }
             num = num.split("#");
             for (i = 0; i < num.length; i++) {
@@ -165,8 +304,6 @@ $(document).ready(function() {
             }
             console.log(logical);
             console.log(a_ops);
-
-
             //monta registradores
             for (i = 0; i < n_regs; i++) {
                 //montar data
@@ -212,7 +349,6 @@ $(document).ready(function() {
         cont = a_ops['cont'] = new Array();
         n = new Array();
         if (currentValue.includes("AND")) {
-            console.log("oi");
             currentValue.replace("AND", "A");
         }
         if (currentValue.includes("OR")) {
@@ -362,7 +498,13 @@ $(document).ready(function() {
         if (e.which == 13) {
             e.preventDefault();
             if (currentValue.length > 1) {
-                calc(currentValue);
+                if ($('#i_np').val() == 0) {
+                    calc(currentValue);
+                } else {
+                    currentValue = rem_endspaces(currentValue);
+                    notacao_polonesa(currentValue);
+                }
+
             }
 
         }
@@ -373,11 +515,26 @@ $(document).ready(function() {
         keyVal = $(this).children("p").text();
         if (keyVal === "=") {
             console.log(currentValue);
-            calc(currentValue);
+            if ($('#i_np').val() == 0) {
+                calc(currentValue);
+            } else {
+                currentValue = rem_endspaces(currentValue);
+                notacao_polonesa(currentValue);
+            }
+
         } else if (keyVal === "DEL") {
             resScreen.text("0");
             opScreen.val("");
             resAssembly.val("");
+        } else if (keyVal === "NP") {
+            i_np = $('#i_np').val();
+            if (i_np == 0) {
+                i_np = $('#i_np').val(1);
+                $("#np").addClass("brown");
+            } else {
+                i_np = $('#i_np').val(0);
+                $("#np").removeClass("brown");
+            }
         } else {
             if (currentValue.length <= 10) {
                 var lastDigit = currentValue.substring(currentValue.length - 1);
@@ -390,4 +547,4 @@ $(document).ready(function() {
         }
 
     });
-});
+})
