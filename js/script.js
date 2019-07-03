@@ -37,23 +37,23 @@ function fatorial(num) {
         return parseInt(num * fatorial(num - 1));
     }
 }
+
+function rem_endspaces(currentValue) {
+    last_ind = currentValue.length - 1;
+    lastDigit = currentValue.substring(last_ind);
+    lastDigit = currentValue.substring(last_ind);
+    if (lastDigit === " ") {
+        currentValue = currentValue.slice(0, -1);
+        return rem_endspaces(currentValue);
+    } else {
+        return currentValue;
+    }
+
+}
 $(document).ready(function() {
     var opScreen = $("#display");
     var resScreen = $("#results p");
     var resAssembly = $("#assembly");
-
-    function rem_endspaces(currentValue) {
-        last_ind = currentValue.length - 1;
-        lastDigit = currentValue.substring(last_ind);
-        lastDigit = currentValue.substring(last_ind);
-        if (lastDigit === " ") {
-            currentValue = currentValue.slice(0, -1);
-            return rem_endspaces(currentValue);
-        } else {
-            return currentValue;
-        }
-
-    }
 
 
     function notacao_polonesa(expressao) {
@@ -68,6 +68,8 @@ $(document).ready(function() {
         li = "la $a1, result\n";
         finaliza = "sw $t9,0($a1)\nla $a0, 0($t9)\nli $v0, 1\nsyscall\n";
         calculo = "";
+        fa = n3 = false;
+
 
         for (var i = 0; i < expressao.length; i++) {
             exp = expressao[i];
@@ -78,6 +80,10 @@ $(document).ready(function() {
                 n_regs++;
                 c3++;
             } else {
+                console.log(c3);
+                if (c3 == 3) {
+                    n3 = true;
+                }
                 var a = parseInt(result.pop());
                 if (exp != "f" && exp !== "F" && exp !== "s" && exp !== "S") {
                     var b = parseInt(result.pop());
@@ -87,12 +93,13 @@ $(document).ready(function() {
                     }
                     if (i < (expressao.length - 3)) {
                         if (!t9) {
-                            calculo = calculo + op + " $a" + n_ops + ",$s" + (n_regs - 1) + ",$s" + n_regs + "\n";
+                            calculo = calculo + op + " $a" + n_ops + ",$s" + (n_regs - 2) + ",$s" + (n_regs - 1) + "\n";
                             //console.log("aqui");
                             //console.log(calculo);
                             //console.log(n_regs);
                         } else {
-                            calculo += op + " $t9,$a" + n_ops + ",$s" + n_regs + "\n";
+                            calculo += op + " $t9,$a" + (n_ops - 1) + ",$s" + (n_regs - 1) + "\n";
+                            fa = true;
                         }
 
                     } else if ((i > (expressao.length - 3)) && expressao.length > 3) {
@@ -104,9 +111,11 @@ $(document).ready(function() {
                         //console.log("DEVIA AQUI");
                         u = 0;
                         while (u < n_ops) {
-                            if (c3 == 3) {
+                            console.log(c3);
+                            if (n3) {
+
                                 if (t9) {
-                                    calculo += op + "$t9,$t9" + ",$s0 \n";
+                                    calculo += op + " $t9,$t9" + ",$s0 \n";
                                     u++;
                                 } else if (!t9 && u < 1) {
                                     calculo += op + " $t9,$s0" + ",$a0\n";
@@ -115,8 +124,14 @@ $(document).ready(function() {
                                 }
                             } else {
                                 if (t9) {
-                                    calculo += op + " $t9,$t9" + ",$a" + u + "\n";
-                                    u++;
+                                    if (fa) {
+                                        calculo += op + " $t9,$t9" + ",$a" + (u + 1) + "\n";
+                                        u += 2;
+                                    } else {
+                                        calculo += op + " $t9,$t9" + ",$a" + u + "\n";
+                                        u++;
+                                    }
+
                                 } else if (!t9 && u <= 1) {
                                     calculo += op + " $t9,$a0" + ",$a1\n";
                                     u += 2;
@@ -128,6 +143,7 @@ $(document).ready(function() {
 
                     }
                     n_ops++;
+                    c3 = 0;
                 }
                 if (exp === "+") {
                     result.push(a + b);
