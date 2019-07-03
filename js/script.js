@@ -106,12 +106,9 @@ $(document).ready(function() {
                         calculo += op + " $t9,$t9" + ",$s" + (n_regs - 1) + "\n";
                     } else if ((i > (expressao.length - 3)) && expressao.length <= 3) {
                         calculo += op + " $t9,$s0" + ",$s1\n";
-                        console.log("DEVIA AQUI");
                     } else {
-                        //console.log("DEVIA AQUI");
                         u = 0;
                         while (u < n_ops) {
-                            console.log(c3);
                             if (n3) {
 
                                 if (t9) {
